@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Microgrid Hub</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-color: #F5F5F7;
+            --card-bg: rgba(255, 255, 255, 0.8);
+            --text-primary: #1D1D1F;
+            --accent: #007AFF;
+            --vortex-glow: #007AFF;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            margin: 0;
+            padding: 40px;
+            display: flex;
+            height: 100vh;
+            box-sizing: border-box;
+            gap: 24px;
+        }
+        .sidebar { width: 250px; display: flex; flex-direction: column; gap: 16px; position: relative; }
+        .nav-button { background: var(--card-bg); border: none; padding: 16px 24px; border-radius: 16px; font-size: 16px; font-weight: 600; cursor: pointer; backdrop-filter: blur(20px); transition: transform 0.2s, background 0.2s; text-align: left; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        .nav-button:hover { transform: scale(1.02); background: #fff; }
+        .nav-button.active { color: var(--accent); }
+        .content { flex: 1; background: var(--card-bg); border-radius: 24px; backdrop-filter: blur(20px); padding: 40px; box-shadow: 0 8px 32px rgba(0,0,0,0.05); overflow-y: auto; display: flex; flex-direction: column; }
+        h1, h2, h3 { font-weight: 600; margin-top: 0; }
+        
+        .mode-selector { display: flex; gap: 10px; margin-bottom: 30px; }
+        .mode-btn { padding: 8px 16px; border-radius: 20px; border: 1px solid #ddd; background: transparent; cursor: pointer; font-weight: 500; transition: all 0.2s; }
+        .mode-btn.active { background: var(--text-primary); color: white; border: none; }
+        .mode-btn:hover:not(.active) { background: #eee; }
+        
+        .grid-cards { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+        .card { background: rgba(255,255,255,0.9); border-radius: 20px; padding: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.02); transition: transform 0.2s; }
+        .card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.04); }
+
+        .chart-container { position: relative; height: 250px; width: 100%; }
+
+        #vortex-btn { margin-top: auto; padding: 20px; border-radius: 16px; background: rgba(0,0,0,0.8); color: white; display: flex; align-items: center; gap: 10px; cursor: pointer; transition: transform 0.2s, background 0.3s; z-index: 10;}
+        #vortex-btn:hover { transform: scale(1.02); }
+        #vortex-orb { width: 12px; height: 12px; border-radius: 50%; background: var(--vortex-glow); box-shadow: 0 0 10px var(--vortex-glow); transition: box-shadow 0.3s, transform 0.3s, background 0.3s; }
+        .listening #vortex-orb { background: #34C759; box-shadow: 0 0 20px #34C759, 0 0 40px #34C759; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.3); } 100% { transform: scale(1); } }
+
+        .jarvis-chat {
+            position: absolute; bottom: 85px; left: 0; width: 100%; box-sizing: border-box;
+            background: rgba(30, 30, 30, 0.85); backdrop-filter: blur(20px); border-radius: 16px;
+            color: #fff; padding: 16px; font-size: 14px; opacity: 0; pointer-events: none;
+            transform: translateY(10px); transition: opacity 0.3s, transform 0.3s;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15); z-index: 5;
+        }
+        .jarvis-chat.visible { opacity: 1; transform: translateY(0); }
+        .typing-cursor { display: inline-block; width: 6px; height: 14px; background: #fff; animation: blink 1s step-end infinite; vertical-align: middle; margin-left: 2px; }
+        @keyframes blink { 50% { opacity: 0; } }
+
+        #sim-output { background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 12px; font-family: monospace; white-space: pre-wrap; overflow-x: auto; max-height: 300px; margin-top: 20px; display: none; }
+    </style>
+</head>
+<body onload="renderDashboard()">
+
+    <div class="sidebar">
+        <h2>Microgrid OS</h2>
+        <button class="nav-button active" onclick="navigate('dashboard', this)">Main Dashboard</button>
+        <button class="nav-button" onclick="navigate('sandbox', this)">Sandbox / Experimental</button>
+        
+        <div class="jarvis-chat" id="jarvis-chat">
+            <div id="jarvis-transcription-container">
+                <span id="jarvis-transcription"></span><span class="typing-cursor" id="typing-cursor"></span>
+            </div>
+            <input type="text" id="jarvis-fallback-input" style="display:none; width:100%; background:transparent; border:none; color:white; outline:none; font-size:14px; font-family:inherit;" placeholder="Electron Network Error: Type command and press Enter..." onkeypress="handleJarvisType(event)">
+        </div>
+
+        <div id="vortex-btn" onclick="toggleJarvis()">
+            <div id="vortex-orb"></div>
+            <span id="vortex-text">Jarvis: Standby</span>
+        </div>
+    </div>
+
+    <div class="content" id="main-view">
+        <!-- Rendered by JS -->
+    </div>
+
+    <script>
+        let currentChart = null;
+        let isJarvisListening = false;
+        let basePrices = []; // Store raw prices
+        let currentMode = 'Economy';
+
+        function navigate(view, el) {
+            document.querySelectorAll('.nav-button').forEach(btn => btn.classList.remove('active'));
+            el.classList.add('active');
+            
+            if (view === 'dashboard') {
+                renderDashboard();
+            } else if (view === 'sandbox') {
+                renderSandbox();
+            }
+        }
+
+        function handleJarvisType(e) {
+            if (e.key === 'Enter') {
+                const text = document.getElementById('vortex-text');
+                const chatBox = document.getElementById('jarvis-chat');
+                const btn = document.getElementById('vortex-btn');
+                const val = e.target.value.toLowerCase();
+                
+                text.innerText = "Jarvis: Processing...";
+                setTimeout(() => {
+                    if (val.includes('comfort')) { setMode('Comfort', true); text.innerText = "Jarvis: Activated Comfort Mode"; }
+                    else if (val.includes('performance')) { setMode('Performance', true); text.innerText = "Jarvis: Activated Performance Mode"; }
+                    else if (val.includes('economy')) { setMode('Economy', true); text.innerText = "Jarvis: Activated Economy Mode"; }
+                    else { text.innerText = "Jarvis: Mode Not Changed"; }
+                    
+                    setTimeout(() => {
+                        chatBox.classList.remove('visible');
+                        btn.classList.remove('listening');
+                        text.innerText = "Jarvis: Standby";
+                        isJarvisListening = false;
+                        document.getElementById('jarvis-transcription-container').style.display = 'block';
+                        document.getElementById('jarvis-fallback-input').style.display = 'none';
+                    }, 2000);
+                }, 500);
+                e.target.value = "";
+            }
+        }
+
+        function toggleJarvis() {
+            if (isJarvisListening) return;
+
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) {
+                alert("Native Speech Recognition API is not supported in this browser engine.");
+                return;
+            }
+            
+            isJarvisListening = true;
+            const btn = document.getElementById('vortex-btn');
+            const text = document.getElementById('vortex-text');
+            const chatBox = document.getElementById('jarvis-chat');
+            const transcription = document.getElementById('jarvis-transcription');
+            const container = document.getElementById('jarvis-transcription-container');
+            const fallbackInput = document.getElementById('jarvis-fallback-input');
+            
+            btn.classList.add('listening');
+            text.innerText = "Jarvis: Listening...";
+            chatBox.classList.add('visible');
+            container.style.display = 'block';
+            fallbackInput.style.display = 'none';
+            transcription.innerText = "(Speak now...)";
+            
+            const recognition = new SpeechRecognition();
+            
+            // INNATE VOCABULARY setup
+            const SpeechGrammarList = window.SpeechGrammarList || window.webkitSpeechGrammarList;
+            if (SpeechGrammarList) {
+                const speechRecognitionList = new SpeechGrammarList();
+                const grammar = '#JSGF V1.0; grammar modes; public <mode> = comfort | economy | performance | jarvis | microgrid | switch ;';
+                speechRecognitionList.addFromString(grammar, 1);
+                recognition.grammars = speechRecognitionList;
+            }
+
+            recognition.continuous = false;
+            recognition.interimResults = true;
+            recognition.lang = 'en-US';
+            
+            recognition.onresult = (event) => {
+                let interimTranscript = '';
+                let finalTranscript = '';
+
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    if (event.results[i].isFinal) {
+                        finalTranscript += event.results[i][0].transcript;
+                    } else {
+                        interimTranscript += event.results[i][0].transcript;
+                    }
+                }
+                transcription.innerText = finalTranscript || interimTranscript;
+            };
+            
+            recognition.onend = () => {
+                // Ignore if we fell back to text mode
+                if (fallbackInput.style.display === 'block') return; 
+                
+                const finalStr = transcription.innerText.toLowerCase();
+                if (finalStr === "(speak now...)") {
+                    // Canceled without speaking
+                    chatBox.classList.remove('visible');
+                    btn.classList.remove('listening');
+                    text.innerText = "Jarvis: Standby";
+                    isJarvisListening = false;
+                    return;
+                }
+
+                text.innerText = "Jarvis: Processing...";
+                
+                setTimeout(() => {
+                    if (finalStr.includes('comfort')) {
+                        setMode('Comfort', true);
+                        text.innerText = "Jarvis: Activated Comfort Mode";
+                    } else if (finalStr.includes('performance')) {
+                        setMode('Performance', true);
+                        text.innerText = "Jarvis: Activated Performance Mode";
+                    } else if (finalStr.includes('economy')) {
+                        setMode('Economy', true);
+                        text.innerText = "Jarvis: Activated Economy Mode";
+                    } else {
+                        text.innerText = "Jarvis: Mode Not Changed";
+                    }
+                    
+                    setTimeout(() => {
+                        chatBox.classList.remove('visible');
+                        btn.classList.remove('listening');
+                        text.innerText = "Jarvis: Standby";
+                        isJarvisListening = false;
+                    }, 2000);
+                }, 500);
+            };
+            
+            recognition.onerror = (event) => {
+                // If Chromium/Electron lacks Speech API keys (network error), provide a sleek text fallback
+                if (event.error === 'network' || event.error === 'not-allowed') {
+                    transcription.innerText = "";
+                    container.style.display = 'none';
+                    fallbackInput.style.display = 'block';
+                    fallbackInput.focus();
+                    text.innerText = "Jarvis: Fallback Activated";
+                } else {
+                    transcription.innerText = "Error tracking voice: " + event.error;
+                    setTimeout(() => {
+                        chatBox.classList.remove('visible');
+                        btn.classList.remove('listening');
+                        text.innerText = "Jarvis: Standby";
+                        isJarvisListening = false;
+                    }, 2000);
+                }
+            };
+            
+            recognition.start();
+        }
+
+        function setMode(modeName, fromJarvis = false) {
+            currentMode = modeName;
+            
+            // Update UI buttons
+            const buttons = document.querySelectorAll('.mode-btn');
+            if (buttons.length > 0) { // Active in dashboard only
+                buttons.forEach(b => {
+                    if (b.innerText === modeName) b.classList.add('active');
+                    else b.classList.remove('active');
+                });
+                
+                // Update specific cards
+                updateDashboardForMode();
+            }
+        }
+
+        function updateDashboardForMode() {
+            // Modify monthly spend prediction
+            const spendEl = document.getElementById('monthly-spend');
+            let spend = 120.50; // Economy baseline
+            let color = '#34C759'; // Green indicating good savings
+            
+            if (currentMode === 'Comfort') { spend = 145.20; color = '#FF9500'; } // Yellow
+            if (currentMode === 'Performance') { spend = 180.95; color = '#FF3B30'; } // Orange/Red
+
+            if (spendEl) {
+                spendEl.innerText = '$' + spend.toFixed(2);
+                spendEl.style.color = color;
+            }
+
+            // Update Chart
+            if (currentChart && basePrices.length > 0) {
+                let multiplier = currentMode === 'Economy' ? 0.8 : (currentMode === 'Comfort' ? 1.1 : 1.4);
+                let labelStr = 'Predicted Net Cost (' + currentMode + ')';
+                
+                let simulatedCost = basePrices.map(p => p * multiplier);
+                
+                currentChart.data.datasets[0].data = simulatedCost;
+                currentChart.data.datasets[0].label = labelStr;
+                currentChart.update();
+            }
+        }
+
+        function renderDashboard() {
+            document.getElementById('main-view').innerHTML = `
+                <h1>Live Dashboard</h1>
+                <div class="mode-selector">
+                    <button class="mode-btn ${currentMode === 'Economy' ? 'active' : ''}" onclick="setMode('Economy')">Economy</button>
+                    <button class="mode-btn ${currentMode === 'Comfort' ? 'active' : ''}" onclick="setMode('Comfort')">Comfort</button>
+                    <button class="mode-btn ${currentMode === 'Performance' ? 'active' : ''}" onclick="setMode('Performance')">Performance</button>
+                </div>
+                
+                <div class="grid-cards">
+                    <div class="card">
+                        <h3>Expected Mon. Spend</h3>
+                        <h1 id="monthly-spend" style="color: #34C759;">$120.50</h1>
+                        <p style="color: #666; font-size: 14px;">Projected end of month cost.</p>
+                    </div>
+                    <div class="card" id="pricing-card">
+                        <h3>Live Electricity Tariff</h3>
+                        <h1 style="color: var(--accent);" id="live-price">Fetching...</h1>
+                        <p id="live-status">Status: ...</p>
+                    </div>
+                    <div class="card">
+                        <h3>Battery SOC</h3>
+                        <h1>64%</h1>
+                        <p>Current Flow: Charging (+2.1 kW)</p>
+                    </div>
+                </div>
+                
+                <div class="card" style="margin-top: 20px; flex: 1; padding-bottom: 40px;">
+                    <h3>Energy Spend Prediction Curve</h3>
+                    <p style="font-size: 14px; color: #888; margin-top: -10px;">Cost elasticity mapped against real-time API tariffs and local solar generation.</p>
+                    <div class="chart-container">
+                        <canvas id="predictionChart"></canvas>
+                    </div>
+                </div>
+            `;
+            setTimeout(fetchLiveDataAndDrawChart, 100);
+            
+            // Set initial state matching current mode immediately
+            setTimeout(updateDashboardForMode, 150);
+        }
+
+        function renderSandbox() {
+            document.getElementById('main-view').innerHTML = `
+                <h1>Sandbox (Experimental)</h1>
+                <p>Execute RL training environments natively via Electron IPC.</p>
+                <div class="card" style="margin-top: 20px;">
+                    <h3>Benchmarks Execution</h3>
+                    <p>Trigger the StableBaselines3 PPO/DQN script to train and evaluate grid logic natively.</p>
+                    <button class="mode-btn" style="background: #34C759; color: white; border: none; margin-top: 10px;" onclick="runSimulation(this)">
+                        Run RL Simulation
+                    </button>
+                    <pre id="sim-output"></pre>
+                </div>
+            `;
+        }
+
+        async function fetchLiveDataAndDrawChart() {
+            try {
+                const hours = Array.from({length: 12}, (_, i) => {
+                    const d = new Date(); d.setHours(d.getHours() + i); 
+                    return d.getHours() + ":00";
+                });
+                
+                // Mock Time-of-Use pricing curve with a spike
+                basePrices = hours.map((h, i) => {
+                    const hr = parseInt(h);
+                    if (hr >= 16 && hr <= 20) return 0.35 + (Math.random() * 0.1); 
+                    if (hr === 18) return 0.85; 
+                    return 0.10 + (Math.random() * 0.05); 
+                });
+
+                const priceElem = document.getElementById('live-price');
+                const statusElem = document.getElementById('live-status');
+                if (priceElem) priceElem.innerText = '$' + basePrices[0].toFixed(2) + ' / kWh';
+                if (statusElem) statusElem.innerText = basePrices[0] > 0.20 ? "Status: On-Peak" : "Status: Off-Peak";
+
+                const ctx = document.getElementById('predictionChart');
+                if (!ctx) return;
+                
+                if (currentChart) currentChart.destroy();
+
+                let multiplier = currentMode === 'Economy' ? 0.8 : (currentMode === 'Comfort' ? 1.1 : 1.4);
+                let initialData = basePrices.map(p => p * multiplier);
+
+                currentChart = new Chart(ctx.getContext('2d'), {
+                    type: 'line',
+                    data: {
+                        labels: hours,
+                        datasets: [{
+                            label: 'Predicted Net Cost (' + currentMode + ')',
+                            data: initialData,
+                            borderColor: '#007AFF',
+                            backgroundColor: 'rgba(0, 122, 255, 0.15)',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.4,
+                            pointBackgroundColor: '#fff',
+                            pointBorderColor: '#007AFF',
+                            pointHoverRadius: 6,
+                            pointRadius: 3
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: {
+                            mode: 'index',
+                            intersect: false,
+                        },
+                        plugins: {
+                            legend: { display: true, position: 'bottom' },
+                            tooltip: {
+                                backgroundColor: 'rgba(0,0,0,0.8)',
+                                titleFont: { size: 14, family: '-apple-system' },
+                                bodyFont: { size: 14, family: '-apple-system' },
+                                padding: 12,
+                                cornerRadius: 8,
+                                displayColors: false,
+                                callbacks: {
+                                    label: function(context) {
+                                        return 'Estimated Cost: $' + context.parsed.y.toFixed(2);
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: { grid: { display: false } },
+                            y: { grid: { borderDash: [5, 5] }, beginAtZero: true }
+                        }
+                    }
+                });
+            } catch (e) {
+                console.error("API Fetch Error", e);
+            }
+        }
+
+        async function runSimulation(btn) {
+            if (!window.electronAPI) {
+                alert("Electron API not found. Are you running this via web browser instead of desktop app?");
+                return;
+            }
+            
+            const outNode = document.getElementById('sim-output');
+            outNode.style.display = 'block';
+            outNode.innerText = "Executing native python script `train_benchmarks.py` via IPC Bridge...\\n(Please standby. Large RL models take time to train on Apple MPS)\\n\\n";
+            btn.innerText = "Running RL...";
+            btn.style.opacity = 0.7;
+            btn.disabled = true;
+
+            try {
+                const res = await window.electronAPI.runPythonSimulation();
+                
+                if (res.status === 'success') {
+                    outNode.innerText += res.output;
+                } else {
+                    outNode.innerText += "ERROR:\\n" + res.error + "\\n" + res.stderr;
+                }
+            } catch (err) {
+                outNode.innerText += "IPC ERROR:\\n" + err.message;
+            }
+            
+            btn.innerText = "Run RL Simulation";
+            btn.style.opacity = 1;
+            btn.disabled = false;
+        }
+    </script>
+</body>
+</html>
