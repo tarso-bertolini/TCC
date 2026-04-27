@@ -1,0 +1,24 @@
+flowchart TD
+    subgraph T[Training string]
+        direction TB
+        A[Historical PV/Grid Data<br/>NREL / Solcast] --> B[MDP Simulation Env.<br/>Stochastic microgrid] --> C[Policy Preprocessing<br/>Feature engineering] --> D[Cloud RL Training<br/>PPO / DQN / Q-Learning] --> E[Model Selection<br/>Best policy by reward] --> F[Model Quantization<br/>TinyML / TFLite Micro] --> G[ESP32 Edge Inference<br/>Local dispatch]
+    end
+
+    subgraph V[Validation string]
+        direction TB
+        H[Model Comparison<br/>cost, MAE, latency, SOC] --> I[Legacy vs. Current draft]
+        J[Battery dispatch actions] --> K[Microgrid operation]
+    end
+
+    D -. feeds .-> H
+    G -. feeds .-> J
+
+    classDef data fill:#eef5ff,stroke:#7aa5d8,stroke-width:1px,color:#1f2d3d;
+    classDef train fill:#fff4e6,stroke:#d8a55f,stroke-width:1px,color:#1f2d3d;
+    classDef deploy fill:#eef9ee,stroke:#7dbb7d,stroke-width:1px,color:#1f2d3d;
+    classDef validate fill:#f4f0ff,stroke:#9c8ad6,stroke-width:1px,color:#1f2d3d;
+
+    class A,B data;
+    class C,D,E train;
+    class F,G deploy;
+    class H,I,J,K validate;
