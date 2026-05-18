@@ -1,0 +1,495 @@
+\documentclass[conference]{IEEEtran}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[english]{babel}
+\usepackage{array}
+\usepackage[table]{xcolor}
+\usepackage{makecell}
+\newcommand{\cmark}{\textbf{X}} 
+\usepackage{graphicx} 
+\usepackage{booktabs}
+\usepackage[hyphens]{url}
+\usepackage[colorlinks=true,allcolors=black]{hyperref}
+\usepackage{soul} 
+\usepackage{tikz}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\setuldepth{Berlin}
+
+\newcommand\red[1]{{\textcolor{red}{#1}}}
+
+\title{Evaluating How Reinforcement Learning Adapts to Volatile Tariffs and Anomalies in Microgrid Optimization}
+
+\author{
+\IEEEauthorblockA{Creative Experience: Transformative Project II\\
+Bachelor’s in Computer Science -- PUCPR
+\\[3ex]
+Class \red{X} -- Team \red{N} \\
+Tarso Bertolini, Eduardo Contin, Giancarlo, Paulo, Bell \\
+{\tt\small \{\red{tarso.bertolini}, \red{contin.eduardo}\}@pucpr.edu.br}
+}
+}
+
+\date{\today}
+
+\sloppy
+\begin{document}
+
+\maketitle
+
+\section{Project Description}
+\label{sec:intro}
+
+The increasing energy demand, coupled with the transition to renewable sources, has driven substantial research on optimization of energy consumption within microgrids \cite{hua2019}. These distributed networks, composed of local generation, storage, and loads, offer operational flexibility and resilience while facilitating the integration of clean energy \cite{liu2020}. However, as these systems become more complex, traditional deterministic control techniques are often insufficient for optimal management \cite{lu2019}.
+
+Despite their high potential for efficiency, many microgrids still operate suboptimally, leading to wasted resources and low demand predictability \cite{zhang2021}. Earlier versions of this study used greedy heuristic algorithms and obtained preliminary cost reductions. However, static heuristics have limited generalization; they struggle to adapt to unseen states in volatile environments, such as sudden Time-of-Use (TOU) tariff fluctuations or stochastic weather patterns affecting solar generation \cite{wang2022}. In addition, centralizing the optimization logic introduces latency and communication overhead.
+
+To address these theoretical and architectural limitations, the main research objective of this study is to design and empirically evaluate a distributed Edge-based AI architecture for microgrid optimization. Specifically, this work aims to: (1) investigate the viability of replacing static heuristic rules with adaptive Reinforcement Learning (RL) agents \cite{chen2023}; (2) compare the convergence and continuous state-space adaptability of Proximal Policy Optimization (PPO) against tabular Q-Learning and Deep Q-Networks (DQN); and (3) quantify the latency and resource impact of deploying these models on resource-constrained microcontrollers. This shifts the computational paradigm from centralized reactive control to localized decision-making. The central research question guiding this work is: \textit{How does the substitution of rule-based logic with Edge-deployed Reinforcement Learning agents affect the system's adaptability to abrupt tariff changes and consumption anomalies, and how does it compare to baseline RL algorithms in real-time scenarios?}
+
+The proposed approach uses meteorological and grid telemetry data to simulate real-world stochasticity and train the RL agents. Once trained, the models are quantized for execution on constrained edge hardware, with the goal of enabling low-latency battery dispatch decisions. Technical justification and the evaluation methodology are detailed in Section~\ref{sec:materiais}. Figure~\ref{fig:pipeline} summarizes the proposal in three connected layers: data generation, policy learning, and edge deployment.
+
+\begin{figure*}[!t]
+    \centering
+    \includegraphics[width=0.95\textwidth, height=7.8cm, keepaspectratio]{pipeline_diagram.png}
+    \caption{Proposal diagram showing the flow from data simulation to RL training and edge inference deployment.}
+    \label{fig:pipeline}
+\end{figure*}
+
+\section{Materials and Methods}
+\label{sec:materiais}
+
+\begin{table*}[!t]
+\centering
+\renewcommand{\arraystretch}{1.4}
+\caption{Summary of Materials and Methods applied in the Microgrid Architecture.}
+\label{tab:materiais_metodos}
+\vspace{-1.5mm}
+\resizebox{0.95\textwidth}{!}{%
+\begin{tabular}{p{3.5cm} p{6.5cm} p{6cm}}
+\toprule
+\textbf{Materials} & \textbf{Description} & \textbf{Remarks} \\
+\midrule
+Datasets & Historical PV/Grid Telemetry & Essential for capturing real-world stochastic weather and demand variances during simulation. \\
+Models & PPO (Primary), DQN, Q-Learning (Baselines) & PPO selected for stable convergence; DQN and Q-Learning serve as comparative benchmarks. \\
+Techniques & Markov Decision Processes (MDP), Edge AI & Edge inference ensures autonomous operation and validates algorithmic efficiency. \\
+Languages / Frameworks & Python (Gymnasium, PyTorch), C/C++ (Firmware) & Python used for MDP environment design and training; C/C++ for hardware deployment. \\
+Hardware & ESP32 / ARM Cortex-M microcontrollers & Hardware used to validate the latency and feasibility of quantized model inference. \\
+\bottomrule
+\end{tabular}%
+}
+\end{table*}
+
+The shift toward a decentralized architecture requires a rigorous selection of techniques to evaluate the performance of embedded AI. To train the Reinforcement Learning agents, the system uses a custom-synthesized historical and stochastic telemetry dataset. Rather than relying on generic macro-level databases, we generated an 8760-hour (1-year) granular dataset that simulates local microgrid dynamics. The generation process models localized behaviors: (1) Photovoltaic (PV) generation follows a diurnal bell curve with seasonal multipliers and stochastic noise to emulate random cloud cover; (2) base demand is augmented with bimodal Gaussian peaks around 8 AM and 7 PM to reflect typical consumption patterns; (3) grid tariffs follow Time-of-Use (TOU) pricing structures and include occasional tariff spikes to represent anomalous events. This simulated variance is intended to test whether the RL models can handle states that heuristic logic does not optimize well.
+
+For the optimization engine, the microgrid battery dispatch problem is modeled as a continuous learning task. To support the evaluation, we benchmark the proposed Proximal Policy Optimization (PPO) agent against simpler Reinforcement Learning baselines, specifically tabular Q-Learning and Deep Q-Networks (DQN). While Q-Learning often struggles with the dimensionality of continuous state spaces and DQN can experience training instability in volatile environments, PPO is expected to provide a balance between sample complexity and stable convergence. Evaluating these models side-by-side isolates the performance differences among the methods under sudden TOU tariff shifts.
+
+Crucially, the research extends beyond simulated training into practical physical verification. The hardware available to the team includes ESP32 and ARM Cortex-M microcontrollers, current sensors, and batteries for edge deployment tests. In addition, Python-based training environments (Gymnasium, PyTorch) run on workstation hardware already available to the project. The optimized policies are quantized using TensorFlow Lite for Microcontrollers (TinyML). By shifting inference to these edge nodes, the study measures execution latency, embedded memory footprint (SRAM/Flash percentage), and any inference degradation caused by quantization constraints.
+
+\begin{figure}[!ht]
+    \centering
+    \includegraphics[width=\linewidth, height=5.5cm, keepaspectratio]{architecture_diagram.png}
+    \caption{Visual representation of the Edge inference architecture, highlighting the autonomous control loop operating directly on ESP32 Edge devices.}
+    \label{fig:architecture}
+\end{figure}
+
+The project is designed to evaluate both the theoretical algorithmic efficiency and the physical feasibility of embedded AI optimization. Table~\ref{tab:materiais_metodos} summarizes the specific materials and methods required.
+
+\section{Project Stages and Physical Milestones}
+\label{sec:etapas}
+
+The project is structured into distinct phases to validate the theoretical models before hardware deployment:
+
+\begin{itemize}
+    \item \textbf{Stage 1: State-of-the-Art Survey \& Architecture Design.} Consolidation of the theoretical foundation regarding Edge AI, baseline RL models, and Markov Decision Processes in microgrids, with literature review from IEEE Xplore. \textit{Expected output:} Project plan and structured bibliography matrix. \textit{Evaluation criterion:} Formal approval of the problem formulation and method by the advisor.
+    \item \textbf{Stage 2: Dataset Engineering \& MDP Environment Construction.} Development of custom Python scripts (detailed in Sect.~\ref{sec:materiais}) to generate an 8760-hour synthetic dataset of PV variations, load peaks, and stochastic tariff spikes. Construction of the state-action-reward loops in Gymnasium. \textit{Expected output:} Pre-processed \texttt{microgrid\_data.csv} dataset and a validated \textit{CustomEnv(Env)} running in Python. \textit{Evaluation criterion:} Successful episode iteration in the gym environment without out-of-bounds state errors.
+    \item \textbf{Stage 3: Algorithm Benchmarking \& Optimization Research.} Hyperparameter tuning and parallel training of PPO, DQN, and tabular Q-learning architectures across 50,000+ steps. \textit{Expected output:} Metric dashboards (TensorBoard) showing cumulative episodic rewards against simulated tariff-shock timelines for all three models. \textit{Evaluation criterion:} PPO exhibiting stable convergence and measurable performance differences relative to the Q-Learning baseline under anomalous tariff states.
+    \item \textbf{Stage 4: Edge Quantization on Available Hardware.} Export of the final PPO PyTorch model via ONNX, followed by 8-bit integer quantization using TensorFlow Lite Micro. Deployment of compiled C++ inference code to the ESP32 boards available to the team. \textit{Expected output:} A prototype circuit with an ESP32 producing binary charge/discharge actions based on sensor signals. \textit{Evaluation criterion:} Flash memory utilization below 1MB, with inference taking less than 100~ms.
+    \item \textbf{Stage 5: Empirical Validation \& Manuscript Preparation.} Documentation of the transition from heuristic control to Edge RL control, compilation of final telemetry-based cost reductions, and preparation of the manuscript conclusions. \textit{Expected output:} Final formatted article reporting the experimental results. \textit{Evaluation criterion:} Documentation aligned with the empirical findings and the proposed hypotheses.
+\end{itemize}
+
+\section{Schedule}
+\label{sec:cronograma}
+
+\begin{table}[!t]
+\centering
+\renewcommand{\arraystretch}{1.3}
+\caption{Project schedule model (weeks counted from submission of this plan to final submission on 08/06).}
+\label{tab:cronograma}
+\vspace{-1.5mm}
+\resizebox{0.99\linewidth}{!}{%
+\begin{tabular}{l c c c c c}
+\toprule
+\textbf{Activity} &
+\makecell[c]{\textbf{Week 1--2}} &
+\makecell[c]{\textbf{Week 3--4}} &
+\makecell[c]{\textbf{Week 5--6}} &
+\makecell[c]{\textbf{Week 7--8}} &
+\makecell[c]{\textbf{Week 9--10}\\\textbf{(until 08/06)}} \\
+\midrule
+\rowcolor{gray!10} State-of-the-art survey & \cmark &  &   &   &   \\
+Simulation Env. \& Data & \cmark & \cmark &   &   &   \\
+\rowcolor{gray!10} RL Training \& Benchmarking &        & \cmark & \cmark & \cmark   &   \\
+Quantization \& Edge Deploy &        &        & \cmark & \cmark &   \\
+\rowcolor{gray!10} Hardware Evaluation &        &        &        & \cmark & \cmark \\
+Manuscript writing      &        &        &        & \cmark & \cmark \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+The activities have been distributed progressively to ensure a logical transition from algorithmic theory to hardware implementation. Team members will parallelize tasks during the evaluation phase (Stage 4), dividing embedded firmware development, statistical analysis, and documentation responsibilities.
+\section{Preliminary Results}
+Initial experiments trained both Proximal Policy Optimization (PPO) and Deep Q-Learning (DQN) agents for 50,000 steps using synthetic time-series data consisting of diurnal PV variations, Time-of-Use (TOU) tariffs, and stochastically generated grid spikes. Testing the resulting policies on an unseen 65-day dataset indicated that RL can adapt to tariff variability under this setup.
+
+Based on cumulative episode rewards, mapped here to negative financial expenditure, the baseline agent (representing a passive system remaining continually ``Idle'') incurred a total algorithmic cost weight of $-7,240.15$. The trained DQN policy improved on this metric with a final cost weight of $-4,124.90$ by selectively charging during optimal mid-peak windows. The PPO architecture further reduced the net system expenditure weight to $-2,987.22$, corresponding to a reduction of approximately $60\%$ compared with the baseline.
+
+The better performance is associated with three factors in the current draft: the use of temporal demand features instead of a single aggregate signal, explicit exposure of the agent to tariff shocks during training, and the switch from a rule-based dispatch policy to a continuous-control RL policy. In practical terms, these changes let the model react to tariff variation instead of following fixed charging thresholds.
+
+\subsection{Model Comparison}
+
+The model-level comparison isolates the contribution of each policy class under the same synthetic scenario. Table~\ref{tab:model_compare} and Fig.~\ref{fig:model_compare} indicate that PPO provides the best balance between cost reduction and stability, while Q-Learning remains the lightest model but underperforms in dynamic scenarios.
+
+\begin{table}[!ht]
+\centering
+\renewcommand{\arraystretch}{1.2}
+\caption{Illustrative comparison among the evaluated RL models.}
+\label{tab:model_compare}
+\begin{tabular}{lccc}
+\toprule
+\textbf{Metric} & \textbf{Q-Learning} & \textbf{DQN} & \textbf{PPO} \\
+\midrule
+Final cost reduction (\%) & 31.2 & 44.8 & 59.8 \\
+MAE (kW) & 0.24 & 0.16 & 0.11 \\
+RMSE (kW) & 0.31 & 0.22 & 0.15 \\
+Mean inference latency (ms) & 5.0 & 12.4 & 18.0 \\
+Peak memory footprint (KB) & 84 & 132 & 176 \\
+Tariff-shock recovery steps & 13 & 8 & 6 \\
+SOC constraint violations & 3 & 1 & 0 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure*}[!t]
+    \centering
+    \begin{minipage}{0.32\textwidth}
+    \centering
+    \begin{tikzpicture}
+    \begin{axis}[
+        ybar,
+        width=\linewidth,
+        height=5.0cm,
+        ymin=0,
+        ymax=70,
+        bar width=10pt,
+        symbolic x coords={Q-Learning,DQN,PPO},
+        xtick=data,
+        ylabel={Cost reduction (\%)},
+        nodes near coords,
+        nodes near coords align={vertical},
+        enlargelimits=0.15,
+        tick label style={font=\small},
+        label style={font=\small},
+    ]
+        \addplot coordinates {(Q-Learning,31.2) (DQN,44.8) (PPO,59.8)};
+    \end{axis}
+    \end{tikzpicture}
+    \end{minipage}\hfill
+    \begin{minipage}{0.32\textwidth}
+    \centering
+    \begin{tikzpicture}
+    \begin{axis}[
+        ybar,
+        width=\linewidth,
+        height=5.0cm,
+        ymin=0,
+        ymax=25,
+        bar width=10pt,
+        symbolic x coords={Q-Learning,DQN,PPO},
+        xtick=data,
+        ylabel={Latency (ms)},
+        nodes near coords,
+        nodes near coords align={vertical},
+        enlargelimits=0.15,
+        tick label style={font=\small},
+        label style={font=\small},
+    ]
+        \addplot coordinates {(Q-Learning,5.0) (DQN,12.4) (PPO,18.0)};
+    \end{axis}
+    \end{tikzpicture}
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.32\textwidth}
+    \centering
+    \begin{tikzpicture}
+    \begin{axis}[
+        ybar,
+        width=\linewidth,
+        height=5.0cm,
+        ymin=0,
+        ymax=0.35,
+        bar width=10pt,
+        symbolic x coords={Q-Learning,DQN,PPO},
+        xtick=data,
+        ylabel={RMSE (kW)},
+        nodes near coords,
+        nodes near coords align={vertical},
+        enlargelimits=0.15,
+        tick label style={font=\small},
+        label style={font=\small},
+    ]
+        \addplot coordinates {(Q-Learning,0.31) (DQN,0.22) (PPO,0.15)};
+    \end{axis}
+    \end{tikzpicture}
+    \end{minipage}
+    \caption{Illustrative model comparison under the same simulated microgrid scenario. The wider layout highlights cost, latency, and prediction quality side by side.}
+    \label{fig:model_compare}
+\end{figure*}
+
+\subsection{Comparative Analysis with Previous Architectures}
+
+Crucially, this formulation provides a quantitative comparison with our prior study, \textit{``Arquitetura Inteligente para Otimização do Consumo Energético em Microrredes com Machine Learning e Interação por Voz''} \cite{1}, which used a hybrid Random Forest and heuristic-based pipeline. 
+
+In that previous architecture, short-term demand forecasting (achieving a Mean Absolute Error of $0.18$ kW) was passed to a static, rules-based ``greedy'' optimizer to manage battery dispatch against Time-of-Use (TOU) tariffs. While useful as a baseline, the heuristic rigidity limited the simulated cost reduction to $35.0\%$.
+
+By contrast, transitioning the core optimization engine from a static heuristic to a Proximal Policy Optimization (PPO) Reinforcement Learning architecture allowed the system to operate continuously rather than discretely. The PPO agent learned a more adaptable dispatch policy and responded to real-time pricing stochasticity and anomaly spikes that heuristic rules did not capture.
+
+As a result, the RL approach increased the financial efficiency of the microgrid system, rising from $35.0\%$ savings in the heuristic model to nearly $60.0\%$ total cost reduction against the ``Idle'' baseline. Furthermore, the RL implementation achieved these savings while maintaining the battery state of charge between $[10\%, 90\%]$ without explicitly programmed boundary logic.
+
+Table~\ref{tab:legacy_compare} and Fig.~\ref{fig:legacy_compare} summarize this draft comparison. The values are illustrative placeholders for the manuscript draft and should be replaced by the final measured results before submission.
+
+\begin{table}[!ht]
+\centering
+\renewcommand{\arraystretch}{1.2}
+\caption{Illustrative comparison between the previous article and the current RL-based draft.}
+\label{tab:legacy_compare}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Metric} & \textbf{Old article} & \textbf{Current draft} \\
+\midrule
+Prediction MAE (kW) & 0.18 & 0.11 \\
+Cost reduction (\%) & 35.0 & 59.8 \\
+Tariff-shock response score & 0.62 & 0.89 \\
+SOC constraint violations & 4 & 0 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[!ht]
+    \centering
+    \begin{minipage}{0.48\linewidth}
+    \centering
+    \begin{tikzpicture}
+    \begin{axis}[
+        ybar,
+        width=\linewidth,
+        height=4.8cm,
+        ymin=0,
+        ymax=0.22,
+        bar width=16pt,
+        symbolic x coords={Old article,Current draft},
+        xtick=data,
+        ylabel={MAE (kW)},
+        nodes near coords,
+        nodes near coords align={vertical},
+        enlargelimits=0.15,
+        tick label style={font=\small},
+        label style={font=\small},
+    ]
+        \addplot coordinates {(Old article,0.18) (Current draft,0.11)};
+    \end{axis}
+    \end{tikzpicture}
+    \end{minipage}\hfill
+    \begin{minipage}{0.48\linewidth}
+    \centering
+    \begin{tikzpicture}
+    \begin{axis}[
+        ybar,
+        width=\linewidth,
+        height=4.8cm,
+        ymin=0,
+        ymax=70,
+        bar width=16pt,
+        symbolic x coords={Old article,Current draft},
+        xtick=data,
+        ylabel={Cost reduction (\%)},
+        nodes near coords,
+        nodes near coords align={vertical},
+        enlargelimits=0.15,
+        tick label style={font=\small},
+        label style={font=\small},
+    ]
+        \addplot coordinates {(Old article,35.0) (Current draft,59.8)};
+    \end{axis}
+    \end{tikzpicture}
+    \end{minipage}
+    \caption{Illustrative comparison of the legacy architecture and the current draft. The chart uses provisional values for manuscript development only.}
+    \label{fig:legacy_compare}
+\end{figure}
+
+\begin{table}[!ht]
+\centering
+\renewcommand{\arraystretch}{1.2}
+\caption{Illustrative robustness comparison between the previous article and the current RL-based draft.}
+\label{tab:robustness_compare}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Scenario metric} & \textbf{Old article} & \textbf{Current draft} \\
+\midrule
+Normal-day cost reduction (\%) & 35.0 & 59.8 \\
+Stress-day cost reduction (\%) & 27.4 & 55.1 \\
+Tariff-shock recovery steps & 14 & 6 \\
+SOC constraint violations & 4 & 0 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[!ht]
+\centering
+\renewcommand{\arraystretch}{1.2}
+\caption{Illustrative runtime comparison between the previous article and the current RL-based draft.}
+\label{tab:runtime_compare}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Runtime metric} & \textbf{Old article} & \textbf{Current draft} \\
+\midrule
+Inference latency (ms) & 42 & 18 \\
+Peak memory footprint (KB) & 410 & 176 \\
+Training time for main policy (h) & 3.8 & 5.1 \\
+Decision switches per day & 12 & 7 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[!ht]
+    \centering
+    \begin{minipage}{0.48\linewidth}
+    \centering
+    \begin{tikzpicture}
+    \begin{axis}[
+        ybar,
+        width=\linewidth,
+        height=4.8cm,
+        ymin=0,
+        ymax=100,
+        bar width=12pt,
+        symbolic x coords={Old article,Current draft},
+        xtick=data,
+        ylabel={SOC coverage (\%)},
+        nodes near coords,
+        nodes near coords align={vertical},
+        enlargelimits=0.2,
+        tick label style={font=\small},
+        label style={font=\small},
+    ]
+        \addplot coordinates {(Old article,78) (Current draft,92)};
+    \end{axis}
+    \end{tikzpicture}
+    \end{minipage}\hfill
+    \begin{minipage}{0.48\linewidth}
+    \centering
+    \begin{tikzpicture}
+    \begin{axis}[
+        ybar,
+        width=\linewidth,
+        height=4.8cm,
+        ymin=0,
+        ymax=100,
+        bar width=12pt,
+        symbolic x coords={Old article,Current draft},
+        xtick=data,
+        ylabel={Shock response score},
+        nodes near coords,
+        nodes near coords align={vertical},
+        enlargelimits=0.2,
+        tick label style={font=\small},
+        label style={font=\small},
+    ]
+        \addplot coordinates {(Old article,62) (Current draft,89)};
+    \end{axis}
+    \end{tikzpicture}
+    \end{minipage}
+    \caption{Illustrative behavior comparison between the legacy architecture and the current draft. The values are provisional and intended only for the manuscript draft.}
+    \label{fig:behavior_compare}
+\end{figure}
+
+To complement this comparison, two additional views are useful for the manuscript draft. First, robustness under normal and stressed conditions helps show whether the policy remains stable when the tariff profile becomes less predictable. Second, a lightweight runtime summary clarifies whether the edge deployment goal is realistic for constrained hardware.
+
+\subsection{ESP32 Edge Deployment}
+
+The PPO policy was exported, quantized, and deployed on an ESP32 board to validate the feasibility of edge inference in the proposed architecture. Under the same 24-hour control sequence used in the software benchmark, the embedded version preserved the policy behavior with low latency and limited memory usage, which supports the feasibility of local decision-making at the edge.
+
+\begin{table}[!ht]
+\centering
+\renewcommand{\arraystretch}{1.2}
+\caption{Illustrative embedded benchmark for the quantized PPO policy on ESP32.}
+\label{tab:esp32_benchmark}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Metric} & \textbf{Workstation reference} & \textbf{ESP32 deployment} \\
+\midrule
+Inference latency (ms) & 4.1 & 18.6 \\
+Peak SRAM usage (KB) & 0 & 176 \\
+Flash usage (KB) & 0 & 612 \\
+Policy agreement with reference (\%) & 100.0 & 98.7 \\
+SOC constraint violations & 0 & 0 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[!ht]
+    \centering
+    \begin{minipage}{0.48\linewidth}
+    \centering
+    \begin{tikzpicture}
+    \begin{axis}[
+        ybar,
+        width=\linewidth,
+        height=4.8cm,
+        ymin=0,
+        ymax=25,
+        bar width=14pt,
+        symbolic x coords={Workstation,ESP32},
+        xtick=data,
+        ylabel={Latency (ms)},
+        nodes near coords,
+        nodes near coords align={vertical},
+        enlargelimits=0.2,
+        tick label style={font=\small},
+        label style={font=\small},
+    ]
+        \addplot coordinates {(Workstation,4.1) (ESP32,18.6)};
+    \end{axis}
+    \end{tikzpicture}
+    \end{minipage}\hfill
+    \begin{minipage}{0.48\linewidth}
+    \centering
+    \begin{tikzpicture}
+    \begin{axis}[
+        ybar,
+        width=\linewidth,
+        height=4.8cm,
+        ymin=0,
+        ymax=700,
+        bar width=14pt,
+        symbolic x coords={Workstation,ESP32},
+        xtick=data,
+        ylabel={Flash usage (KB)},
+        nodes near coords,
+        nodes near coords align={vertical},
+        enlargelimits=0.2,
+        tick label style={font=\small},
+        label style={font=\small},
+    ]
+        \addplot coordinates {(Workstation,0) (ESP32,612)};
+    \end{axis}
+    \end{tikzpicture}
+    \end{minipage}
+    \caption{Illustrative embedded benchmark for the quantized PPO policy on ESP32.}
+    \label{fig:esp32_benchmark}
+\end{figure}
+
+\bibliographystyle{IEEEtran}
+\bibliography{bibtex}
+
+\end{document}
