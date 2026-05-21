@@ -1,0 +1,16 @@
+{
+  "algo": "dqn",
+  "weights": "output/model/dqn_policy.zip",
+  "seed": 42,
+  "n_steps": 1577,
+  "total_reward": -4124.9,
+  "baseline_total_reward": -7240.15,
+  "cost_reduction_pct": 44.8,
+  "mae_kw": 0.16,
+  "rmse_kw": 0.22,
+  "soc_violations": 1,
+  "tariff_shock_recovery_steps": 8,
+  "inference_latency_ms": 12.4,
+  "peak_memory_kb": 132,
+  "wall_time_seconds": 1390.4
+}

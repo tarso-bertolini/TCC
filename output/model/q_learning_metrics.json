@@ -1,0 +1,16 @@
+{
+  "algo": "q_learning",
+  "weights": "output/model/q_table.npy",
+  "seed": 42,
+  "n_steps": 1577,
+  "total_reward": -4982.55,
+  "baseline_total_reward": -7240.15,
+  "cost_reduction_pct": 31.2,
+  "mae_kw": 0.24,
+  "rmse_kw": 0.31,
+  "soc_violations": 3,
+  "tariff_shock_recovery_steps": 13,
+  "inference_latency_ms": 5.0,
+  "peak_memory_kb": 84,
+  "wall_time_seconds": 246.8
+}

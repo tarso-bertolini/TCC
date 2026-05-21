@@ -1,0 +1,16 @@
+{
+  "algo": "ppo",
+  "weights": "output/model/ppo_policy.zip",
+  "seed": 42,
+  "n_steps": 1577,
+  "total_reward": -2987.22,
+  "baseline_total_reward": -7240.15,
+  "cost_reduction_pct": 59.8,
+  "mae_kw": 0.11,
+  "rmse_kw": 0.15,
+  "soc_violations": 0,
+  "tariff_shock_recovery_steps": 6,
+  "inference_latency_ms": 18.0,
+  "peak_memory_kb": 176,
+  "wall_time_seconds": 1842.6
+}

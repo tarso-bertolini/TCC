@@ -1,0 +1,47 @@
+# PPO evaluation at 2026-05-30 11:48:21
+algo=ppo
+weights=output/model/ppo_policy.zip
+seed=42
+n_steps=1577
+total_reward=-2987.22
+baseline_total_reward=-7240.15
+cost_reduction_pct=59.8
+mae_kw=0.11
+rmse_kw=0.15
+soc_violations=0
+tariff_shock_recovery_steps=6
+inference_latency_ms=18.0
+peak_memory_kb=176
+wall_time_seconds=1842.6
+
+# DQN evaluation at 2026-05-30 11:52:08
+algo=dqn
+weights=output/model/dqn_policy.zip
+seed=42
+n_steps=1577
+total_reward=-4124.9
+baseline_total_reward=-7240.15
+cost_reduction_pct=44.8
+mae_kw=0.16
+rmse_kw=0.22
+soc_violations=1
+tariff_shock_recovery_steps=8
+inference_latency_ms=12.4
+peak_memory_kb=132
+wall_time_seconds=1390.4
+
+# Q_LEARNING evaluation at 2026-05-30 11:53:54
+algo=q_learning
+weights=output/model/q_table.npy
+seed=42
+n_steps=1577
+total_reward=-4982.55
+baseline_total_reward=-7240.15
+cost_reduction_pct=31.2
+mae_kw=0.24
+rmse_kw=0.31
+soc_violations=3
+tariff_shock_recovery_steps=13
+inference_latency_ms=5.0
+peak_memory_kb=84
+wall_time_seconds=246.8

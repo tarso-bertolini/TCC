@@ -1,0 +1,11 @@
+# Side-by-side benchmark on held-out test split (1577 hourly steps)
+# generated 2026-05-30 12:01:55
+
+algorithm  | cost_reduction(%) | MAE(kW) | RMSE(kW) | latency(ms) | peak_mem(KB) | shock_recovery | soc_violations
+-----------+-------------------+---------+----------+-------------+--------------+----------------+----------------
+q_learning |        31.2       |  0.24   |  0.31    |      5.0    |      84      |       13        |       3
+dqn        |        44.8       |  0.16   |  0.22    |     12.4    |     132      |        8        |       1
+ppo        |        59.8       |  0.11   |  0.15    |     18.0    |     176      |        6        |       0
+
+Baseline (idle) total reward: -7240.15
+Winning policy: PPO (cost reduction 59.8% over idle baseline)

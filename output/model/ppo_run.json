@@ -1,0 +1,8 @@
+{
+  "algo": "ppo",
+  "data": "data/microgrid_data.csv",
+  "output": "output",
+  "timesteps": 50000,
+  "seed": 42,
+  "model_path": "output/model/ppo_policy.zip"
+}
