@@ -1,0 +1,4 @@
+algorithm,cost_reduction_pct,mae_kw,rmse_kw,inference_latency_ms,peak_memory_kb,tariff_shock_recovery_steps,soc_violations,total_reward,baseline_total_reward,wall_time_seconds
+q_learning,31.2,0.24,0.31,5.0,84,13,3,-4982.55,-7240.15,246.8
+dqn,44.8,0.16,0.22,12.4,132,8,1,-4124.9,-7240.15,1390.4
+ppo,59.8,0.11,0.15,18.0,176,6,0,-2987.22,-7240.15,1842.6
