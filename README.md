@@ -259,18 +259,6 @@ The firmware reads four ADC channels (SOC · demand · PV · tariff), runs the i
 
 ---
 
-## Delivery bundle / submission
-
-The folder you submit to the mentoring task must include:
-
-- [`readme.txt`](readme.txt) at the root — authoritative, plain-text per-artifact description with execution parameters (graded directly)
-- `data/`, `src/`, `scripts/`, `output/model/`, `output/logs/`, `output/figures/`, `output/results.{csv,xlsx}`, `esp32/`
-
-> The cloud folder **must be shared as "Anyone with the link — Viewer"** with download enabled. A broken or non-downloadable link is graded zero per the brief.
-
----
-
-<div align="center">
 
 **Contact** — tarso.bertolini@pucpr.edu.br
 
